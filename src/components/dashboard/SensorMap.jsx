@@ -1,0 +1,80 @@
+import { useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
+import { NODE_TYPES, RISK_LEVELS, formatRelative, readingSummary } from '@/lib/sensors'
+
+function FitBounds({ nodes }) {
+  const map = useMap()
+  const signature = useMemo(() => nodes.map((n) => n.id).join(','), [nodes])
+
+  useEffect(() => {
+    if (!nodes.length) return
+    const bounds = nodes.map((n) => [n.lat, n.lng])
+    map.invalidateSize()
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 6 })
+  }, [map, nodes, signature])
+
+  useEffect(() => {
+    const onResize = () => map.invalidateSize()
+    window.addEventListener('resize', onResize)
+    const timer = window.setTimeout(onResize, 80)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('resize', onResize)
+    }
+  }, [map])
+
+  return null
+}
+
+export function SensorMap({ nodes, height = 'h-[420px]' }) {
+  return (
+    <div className={`sensor-map-frame overflow-hidden ${height}`}>
+      <MapContainer
+        center={[22.5, 80]}
+        zoom={5}
+        scrollWheelZoom={false}
+        style={{ width: '100%', height: '100%' }}
+        attributionControl={false}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="&copy; OpenStreetMap contributors"
+        />
+        <FitBounds nodes={nodes} />
+        {nodes.map((node) => {
+          const color = RISK_LEVELS[node.risk]?.color || '#64748b'
+          return (
+            <CircleMarker
+              key={node.id}
+              center={[node.lat, node.lng]}
+              radius={node.risk === 'CRITICAL' ? 11 : 8}
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: node.status === 'offline' ? 0.25 : 0.75,
+                weight: 2,
+                opacity: node.status === 'offline' ? 0.4 : 1,
+              }}
+            >
+              <Popup>
+                <div className="p-1">
+                  <strong>{node.name}</strong>
+                  <div className="fs-11 text-secondary">
+                    {node.id} · {NODE_TYPES[node.type].label} · {node.risk}
+                  </div>
+                  <div className="fs-11 text-secondary">
+                    {node.city}, {node.region}
+                  </div>
+                  <div className="fs-sm fw-medium">{readingSummary(node)}</div>
+                  <div className="fs-11 text-secondary mb-1">Updated {formatRelative(node.lastSeen)}</div>
+                  <Link to={`/node/${node.id}`}>Open node detail</Link>
+                </div>
+              </Popup>
+            </CircleMarker>
+          )
+        })}
+      </MapContainer>
+    </div>
+  )
+}
