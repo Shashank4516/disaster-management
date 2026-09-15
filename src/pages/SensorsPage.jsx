@@ -7,7 +7,7 @@ import { SensorMap } from '@/components/dashboard/SensorMap'
 import { PageHeader } from '@/components/dashbyte/PageHeader'
 
 export function SensorsPage() {
-  const { nodes } = useOutletContext()
+  const { nodes, status: connection } = useOutletContext()
   const [type, setType] = useState('all')
   const [status, setStatus] = useState('all')
 
@@ -23,7 +23,7 @@ export function SensorsPage() {
     <>
       <div className="d-flex align-items-center justify-content-between">
         <PageHeader crumb="Regional Risk Map" title="Regional risk map" actions={false} />
-        <LivePill />
+        <LivePill live={connection === 'live'} />
       </div>
 
       <Row className="g-3 mb-3">

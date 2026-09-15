@@ -22,8 +22,26 @@ export function AppShell() {
           onMenu={() => setSidebarOpen((open) => !open)}
           alerts={network.alerts}
           unackedCount={network.unackedCount}
+          user={network.user}
+          connection={network.status}
         />
         <main className="app-content">
+          {network.error ? (
+            <div className="alert alert-warning d-flex justify-content-between align-items-center mb-3" role="status">
+              <div>
+                <strong>Backend unreachable.</strong> {network.error}
+                <div className="fs-11 mt-1">Start Environet-BE with <code>npm run backend</code></div>
+              </div>
+              <button type="button" className="btn btn-sm btn-white" onClick={network.refresh}>
+                Retry
+              </button>
+            </div>
+          ) : null}
+          {network.status === 'connecting' && network.nodes.length === 0 ? (
+            <div className="alert alert-light mb-3" role="status">
+              Connecting to Environet API…
+            </div>
+          ) : null}
           <Outlet context={network} />
           <AppFooter />
         </main>

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Button, Card } from 'react-bootstrap'
 import { CardNav } from '@/components/dashbyte/PageHeader'
 import { RiskBadge } from '@/components/dashboard/RiskBadge'
-import { HAZARDS, formatRelative } from '@/lib/sensors'
+import { formatRelative, hazardMeta } from '@/lib/sensors'
 
 export function AlertFeed({ alerts, onAcknowledge, onEscalate, onResolve, compact = false }) {
   const list = compact ? alerts.slice(0, 5) : alerts
@@ -18,7 +18,7 @@ export function AlertFeed({ alerts, onAcknowledge, onEscalate, onResolve, compac
         {list.map((alert) => (
           <div key={alert.id} className="d-flex align-items-start mb-3 pb-3 border-bottom">
             <div className="card-icon bg-primary me-3" style={{ width: 40, height: 40 }}>
-              <i className={HAZARDS[alert.hazard].icon} />
+              <i className={hazardMeta(alert.hazard).icon} />
             </div>
             <div className="flex-fill">
               <div className="d-flex align-items-center gap-2 mb-1">

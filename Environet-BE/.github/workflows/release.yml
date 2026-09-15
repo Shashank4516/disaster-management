@@ -1,0 +1,201 @@
+# Release pipeline for EnvironetBE.
+#
+# Triggered by pushing a tag (v0.5.0) or manually (Run workflow → enter version).
+# It: 1) builds a CLEAN database snapshot from schema.sql + migrations + seed,
+#     2) builds both images and runs the full API smoke-test suite against them
+#        locally — a failing test blocks the release,
+#     3) pushes the images to Docker Hub,
+#     4) bumps the image tags in the frontend compose repo and pushes.
+#
+# Required GitHub secrets (Settings → Secrets and variables → Actions):
+#   DOCKERHUB_USERNAME — Docker Hub username with push access (e.g. penguin5681)
+#   DOCKERHUB_TOKEN    — Docker Hub access token (Read & Write)
+#   COMPOSE_REPO_PAT   — GitHub PAT with Contents: read/write on the compose repo
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, e.g. 0.5.0'
+        required: true
+        type: string
+
+env:
+  DH_REPO: penguin5681/environet
+  DH_IMAGE_API: penguin5681/environet
+  DH_IMAGE_DB: penguin5681/environet
+  # Adjust if the compose repo lives under a different account/name:
+  COMPOSE_REPO: penguin5681/Environet-DockerCompose
+
+jobs:
+  snapshot:
+    name: Build clean DB snapshot
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Start TimescaleDB (PostgreSQL 18)
+        run: |
+          docker run -d --name db \
+            -e POSTGRES_USER=environet \
+            -e POSTGRES_PASSWORD=environet \
+            -e POSTGRES_DB=environet_db \
+            -p 5432:5432 timescale/timescaledb:latest-pg18
+          until docker exec db pg_isready -U environet -d environet_db -q; do sleep 2; done
+          # pg_isready can pass BEFORE the image's init scripts have installed
+          # the timescaledb extension — wait for the extension itself, or
+          # create_hypertable fails with "function does not exist".
+          until docker exec db psql -U environet -d environet_db -tAc \
+            "SELECT count(*) FROM pg_extension WHERE extname = 'timescaledb'" 2>/dev/null | grep -q '^1$'; do
+            sleep 2
+          done
+
+      - name: Apply schema, migrations, and seed
+        run: |
+          docker cp schema.sql db:/tmp/1_schema.sql
+          docker exec db psql -U environet -d environet_db -v ON_ERROR_STOP=1 -f /tmp/1_schema.sql
+          for f in db/migrations/*.sql; do
+            docker cp "$f" db:/tmp/migration.sql
+            docker exec db psql -U environet -d environet_db -v ON_ERROR_STOP=1 -f /tmp/migration.sql
+          done
+          docker cp db/seed.sql db:/tmp/3_seed.sql
+          docker exec db psql -U environet -d environet_db -v ON_ERROR_STOP=1 -f /tmp/3_seed.sql
+
+      - name: Dump clean snapshot
+        run: |
+          mkdir -p db/snapshot
+          docker exec db pg_dump -U environet environet_db > db/snapshot/environet_db.sql
+          test -s db/snapshot/environet_db.sql
+          echo "snapshot size: $(wc -c < db/snapshot/environet_db.sql) bytes"
+
+      - name: Upload snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-snapshot
+          path: db/snapshot/environet_db.sql
+          retention-days: 3
+
+  verify:
+    name: Build images and run smoke tests
+    needs: snapshot
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.snapshot.outputs.version }}
+      COMPOSE_FILE: deploy/docker-compose.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download DB snapshot
+        uses: actions/download-artifact@v4
+        with:
+          name: db-snapshot
+          path: db/snapshot
+
+      - name: Build release images
+        run: |
+          docker build -f Dockerfile -t "$DH_IMAGE_API:api-$VERSION" .
+          docker build -f Dockerfile.db-seeded -t "$DH_IMAGE_DB:db-$VERSION" .
+
+      - name: Point the deploy compose at this build
+        run: |
+          sed -i "s/environet:api-[0-9][0-9.]*/environet:api-$VERSION/" deploy/docker-compose.yml
+          sed -i "s/environet:db-[0-9][0-9.]*/environet:db-$VERSION/" deploy/docker-compose.yml
+          grep "image:" deploy/docker-compose.yml
+
+      - name: Start the full stack exactly as the frontend team runs it
+        run: docker compose up -d --wait
+
+      - name: Run API smoke tests (gates the release)
+        run: npm run test:api
+
+      - name: Stack logs on failure
+        if: failure()
+        run: docker compose logs --tail 100
+
+  publish:
+    name: Push images to Docker Hub
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.snapshot.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download DB snapshot
+        uses: actions/download-artifact@v4
+        with:
+          name: db-snapshot
+          path: db/snapshot
+
+      - name: Rebuild tagged images
+        run: |
+          docker build -f Dockerfile -t "$DH_IMAGE_API:api-$VERSION" .
+          docker build -f Dockerfile.db-seeded -t "$DH_IMAGE_DB:db-$VERSION" .
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push version + latest tags
+        run: |
+          docker tag "$DH_IMAGE_API:api-$VERSION" "$DH_IMAGE_API:api-latest"
+          docker tag "$DH_IMAGE_DB:db-$VERSION" "$DH_IMAGE_DB:db-latest"
+          docker push "$DH_IMAGE_API:api-$VERSION"
+          docker push "$DH_IMAGE_API:api-latest"
+          docker push "$DH_IMAGE_DB:db-$VERSION"
+          docker push "$DH_IMAGE_DB:db-latest"
+
+  sync-compose-repo:
+    name: Bump image tags in the frontend compose repo
+    needs: publish
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.snapshot.outputs.version }}
+    steps:
+      - name: Checkout backend (for reference files)
+        uses: actions/checkout@v4
+        with:
+          path: backend
+
+      - name: Checkout frontend compose repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.COMPOSE_REPO }}
+          token: ${{ secrets.COMPOSE_REPO_PAT }}
+          path: compose
+
+      - name: Bump image tags to the released version
+        run: |
+          sed -i "s/environet:api-[0-9][0-9.]*/environet:api-$VERSION/" compose/docker-compose.yml
+          sed -i "s/environet:db-[0-9][0-9.]*/environet:db-$VERSION/" compose/docker-compose.yml
+          echo "--- resulting image refs:"
+          grep "image:" compose/docker-compose.yml
+
+      - name: Commit and push
+        run: |
+          cd compose
+          git config user.name "environet-release-bot"
+          git config user.email "environet-release-bot@users.noreply.github.com"
+          git add docker-compose.yml
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: sync backend images to v$VERSION"
+            git push
+          fi

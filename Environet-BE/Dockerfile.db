@@ -1,0 +1,8 @@
+FROM timescale/timescaledb:latest-pg18
+
+# Defaults for standalone `docker run`; compose overrides these at runtime.
+ENV POSTGRES_USER=environet \
+    POSTGRES_PASSWORD=environet \
+    POSTGRES_DB=environet_db
+
+COPY db/init/ /docker-entrypoint-initdb.d/

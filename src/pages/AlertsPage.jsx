@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Button, Card, Col, Nav, Row, Table } from 'react-bootstrap'
 import { PageHeader } from '@/components/dashbyte/PageHeader'
 import { RiskBadge } from '@/components/dashboard/RiskBadge'
-import { HAZARDS, formatRelative } from '@/lib/sensors'
+import { HAZARDS, formatRelative, hazardMeta } from '@/lib/sensors'
 
 export function AlertsPage() {
   const { alerts, acknowledgeAlert, escalateAlert, resolveAlert } = useOutletContext()
@@ -142,7 +142,7 @@ export function AlertsPage() {
                         <div className="fw-medium mt-1">{alert.title}</div>
                         <div className="fs-11 text-secondary">{alert.area}</div>
                       </td>
-                      <td>{HAZARDS[alert.hazard].hazardLabel}</td>
+                      <td>{hazardMeta(alert.hazard).hazardLabel}</td>
                       <td>
                         <Link to={`/node/${alert.nodeId}`}>{alert.nodeId}</Link>
                       </td>
@@ -155,16 +155,31 @@ export function AlertsPage() {
                             <Button
                               size="sm"
                               variant="primary"
-                              onClick={() => {
-                                acknowledgeAlert(alert.id)
-                                toast.success('Alert acknowledged')
+                              onClick={async () => {
+                                try {
+                                  await acknowledgeAlert(alert.id)
+                                  toast.success('Alert acknowledged')
+                                } catch {
+                                  // hook already toasted the API error
+                                }
                               }}
                             >
                               Ack
                             </Button>
                           ) : null}
                           {alert.status !== 'resolved' && alert.status !== 'escalated' ? (
-                            <Button size="sm" variant="white" onClick={() => escalateAlert(alert.id)}>
+                            <Button
+                              size="sm"
+                              variant="white"
+                              onClick={async () => {
+                                try {
+                                  await escalateAlert(alert.id)
+                                  toast.success('Alert escalated')
+                                } catch {
+                                  // hook already toasted the API error
+                                }
+                              }}
+                            >
                               Escalate
                             </Button>
                           ) : null}
@@ -172,9 +187,13 @@ export function AlertsPage() {
                             <Button
                               size="sm"
                               variant="white"
-                              onClick={() => {
-                                resolveAlert(alert.id)
-                                toast.success('Alert resolved')
+                              onClick={async () => {
+                                try {
+                                  await resolveAlert(alert.id)
+                                  toast.success('Alert resolved')
+                                } catch {
+                                  // hook already toasted the API error
+                                }
                               }}
                             >
                               Resolve

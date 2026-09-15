@@ -6,10 +6,10 @@ import { AlertFeed } from '@/components/dashboard/AlertFeed'
 import { LivePill, RiskBadge } from '@/components/dashboard/RiskBadge'
 import { SensorMap } from '@/components/dashboard/SensorMap'
 import { sparkOptions, sparkSeries } from '@/lib/apex'
-import { NODE_TYPES, formatRelative, readingSummary } from '@/lib/sensors'
+import { formatRelative, nodeTypeMeta, readingSummary } from '@/lib/sensors'
 
 export function OverviewPage() {
-  const { nodes, alerts, stats, ticks, acknowledgeAlert, escalateAlert, resolveAlert } = useOutletContext()
+  const { nodes, alerts, stats, ticks, status, acknowledgeAlert, escalateAlert, resolveAlert } = useOutletContext()
   const recent = [...alerts].sort((a, b) => b.ts - a.ts)
   const hot = [...nodes].sort((a, b) => b.riskScore - a.riskScore)
   const pct = (n) => Math.round((n / (stats.totalNodes || 1)) * 100)
@@ -93,7 +93,7 @@ export function OverviewPage() {
           <h1 className="main-title">Network overview</h1>
           <p className="page-description">Real-time environmental risk and infrastructure health across all regions.</p>
         </div>
-        <LivePill />
+        <LivePill live={status === 'live'} />
       </div>
 
       <Row className="g-3">
@@ -159,7 +159,7 @@ export function OverviewPage() {
             </Card.Header>
             <Card.Body>
               <p className="fs-sm text-secondary mb-3">
-                Aggregated from the same node readings as Node Detail. Values update every 2.5s.
+                Aggregated from the same node readings as Node Detail. Values stream from the Environet API.
               </p>
               <ApexChart series={trendSeries} options={trendOptions} type="line" height={260} />
             </Card.Body>
@@ -226,8 +226,8 @@ export function OverviewPage() {
                         <div className="fs-11 text-secondary">{node.id}</div>
                       </td>
                       <td>
-                        <i className={`${NODE_TYPES[node.type].icon} me-1`} />
-                        {NODE_TYPES[node.type].label}
+                        <i className={`${nodeTypeMeta(node.type).icon} me-1`} />
+                        {nodeTypeMeta(node.type).label}
                       </td>
                       <td>{readingSummary(node)}</td>
                       <td>{Math.round(node.confidence * 100)}%</td>

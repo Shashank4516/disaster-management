@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Card, Table } from 'react-bootstrap'
 import { CardNav } from '@/components/dashbyte/PageHeader'
 import { RiskBadge } from '@/components/dashboard/RiskBadge'
-import { NODE_TYPES, formatRelative, readingSummary } from '@/lib/sensors'
+import { formatRelative, nodeTypeMeta, readingSummary } from '@/lib/sensors'
 
 export function NodeTable({ nodes }) {
   return (
@@ -28,7 +28,7 @@ export function NodeTable({ nodes }) {
               <tr key={node.id}>
                 <td>
                   <div className="d-flex align-items-center fw-medium">
-                    <i className={`${NODE_TYPES[node.type].icon} fs-24 lh-1 me-2`} />
+                    <i className={`${nodeTypeMeta(node.type).icon} fs-24 lh-1 me-2`} />
                     <div>
                       <Link to={`/node/${node.id}`}>{node.name}</Link>
                       <div className="fs-11 text-secondary">
@@ -37,7 +37,7 @@ export function NodeTable({ nodes }) {
                     </div>
                   </div>
                 </td>
-                <td>{NODE_TYPES[node.type].label}</td>
+                <td>{nodeTypeMeta(node.type).label}</td>
                 <td>{readingSummary(node)}</td>
                 <td>
                   <RiskBadge risk={node.risk} />

@@ -35,6 +35,14 @@ export const HAZARDS = {
   pollution: NODE_TYPES.atmosphere,
 }
 
+export function nodeTypeMeta(type) {
+  return NODE_TYPES[type] || NODE_TYPES.water
+}
+
+export function hazardMeta(hazard) {
+  return HAZARDS[hazard] || NODE_TYPES[hazard] || NODE_TYPES.water
+}
+
 const RISK_RANK = { NORMAL: 0, WATCH: 1, WARNING: 2, CRITICAL: 3 }
 
 export function formatRelative(ts) {
@@ -50,6 +58,11 @@ export function formatRelative(ts) {
 
 function clamp(n, min, max) {
   return Math.round(Math.max(min, Math.min(max, n)) * 10) / 10
+}
+
+function n(value, fallback = 0) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
 }
 
 function band(value, watch, warning, critical, invert = false) {
@@ -74,42 +87,46 @@ export function aqiFromPm(pm25, pm10) {
 }
 
 export function classifyNode(node) {
-  const r = node.readings
-  let risk = 'NORMAL'
-  let trigger = ''
-  let score = 12
+  const r = node.readings || {}
+  let risk
+  let trigger
+  let score
 
   if (node.type === 'water') {
-    const level = band(r.waterLevelCm, 80, 140, 180)
-    const rise = band(r.rateOfRiseCmHr, 4, 10, 18)
-    const rain = band(r.rainfallMmHr, 8, 18, 30)
+    const waterLevel = n(r.waterLevelCm)
+    const riseRate = n(r.rateOfRiseCmHr)
+    const rainRate = n(r.rainfallMmHr)
+    const level = band(waterLevel, 80, 140, 180)
+    const rise = band(riseRate, 4, 10, 18)
+    const rain = band(rainRate, 8, 18, 30)
     risk = worse(worse(level, rise), rain)
-    score =
-      Math.min(98, r.waterLevelCm / 2.2 + r.rateOfRiseCmHr * 2.4 + r.rainfallMmHr * 1.1)
-    if (risk === 'CRITICAL') trigger = `Water ${r.waterLevelCm} cm · rise ${r.rateOfRiseCmHr} cm/hr`
-    else if (risk === 'WARNING') trigger = `Water ${r.waterLevelCm} cm with rainfall ${r.rainfallMmHr} mm/hr`
-    else trigger = `Water ${r.waterLevelCm} cm`
+    score = Math.min(98, waterLevel / 2.2 + riseRate * 2.4 + rainRate * 1.1)
+    if (risk === 'CRITICAL') trigger = `Water ${waterLevel} cm · rise ${riseRate} cm/hr`
+    else if (risk === 'WARNING') trigger = `Water ${waterLevel} cm with rainfall ${rainRate} mm/hr`
+    else trigger = `Water ${waterLevel} cm`
   } else if (node.type === 'forest') {
-    const gas = band(r.gasPpm, 80, 150, 220)
-    const dry = band(r.soilMoisturePct, 25, 15, 8, true)
+    const gasPpm = n(r.gasPpm)
+    const soil = n(r.soilMoisturePct, 40)
+    const gas = band(gasPpm, 80, 150, 220)
+    const dry = band(soil, 25, 15, 8, true)
     risk = worse(gas, dry)
     if (r.flameDetected || r.flameSustained) risk = 'CRITICAL'
-    score = Math.min(98, r.gasPpm / 2.8 + (r.flameDetected ? 40 : 0) + Math.max(0, 30 - r.soilMoisturePct))
+    score = Math.min(98, gasPpm / 2.8 + (r.flameDetected ? 40 : 0) + Math.max(0, 30 - soil))
     trigger = r.flameDetected
       ? 'Flame detected'
-      : `MQ-135 ${r.gasPpm} ppm · soil ${r.soilMoisturePct}%`
+      : `MQ-135 ${gasPpm} ppm · soil ${soil}%`
   } else {
-    const aqi = aqiFromPm(r.pm25, r.pm10)
+    const aqi = aqiFromPm(n(r.pm25), n(r.pm10))
     risk = band(aqi, 100, 200, 300)
     score = Math.min(98, aqi / 3.4)
-    trigger = `AQI ${aqi} · PM2.5 ${r.pm25}`
+    trigger = `AQI ${aqi} · PM2.5 ${n(r.pm25)}`
   }
 
   if (node.status === 'offline') {
     risk = worse(risk, 'WATCH')
   }
 
-  const signalPenalty = Math.max(0, (-90 - node.signalDbm) / 20)
+  const signalPenalty = Math.max(0, (-90 - n(node.signalDbm, -70)) / 20)
   const confidence = clamp(0.92 - signalPenalty - (node.status === 'degraded' ? 0.12 : 0), 0.45, 0.98)
 
   return {
@@ -122,26 +139,26 @@ export function classifyNode(node) {
 }
 
 export function snapshotValues(node) {
-  const r = node.readings
+  const r = node.readings || {}
   if (node.type === 'water') {
     return {
-      waterLevelCm: r.waterLevelCm,
-      rainfallMmHr: r.rainfallMmHr,
-      turbidityNtu: r.turbidityNtu,
-      rateOfRiseCmHr: r.rateOfRiseCmHr,
+      waterLevelCm: n(r.waterLevelCm),
+      rainfallMmHr: n(r.rainfallMmHr),
+      turbidityNtu: n(r.turbidityNtu),
+      rateOfRiseCmHr: n(r.rateOfRiseCmHr),
     }
   }
   if (node.type === 'forest') {
     return {
-      gasPpm: r.gasPpm,
-      soilMoisturePct: r.soilMoisturePct,
+      gasPpm: n(r.gasPpm),
+      soilMoisturePct: n(r.soilMoisturePct),
       flame: r.flameDetected ? 1 : 0,
     }
   }
   return {
-    pm25: r.pm25,
-    pm10: r.pm10,
-    aqi: aqiFromPm(r.pm25, r.pm10),
+    pm25: n(r.pm25),
+    pm10: n(r.pm10),
+    aqi: aqiFromPm(n(r.pm25), n(r.pm10)),
   }
 }
 
@@ -152,41 +169,41 @@ export function primaryMetric(node) {
 }
 
 export function readingFields(node) {
-  const r = node.readings
+  const r = node.readings || {}
   if (node.type === 'water') {
     return [
-      { label: 'Water level', value: `${r.waterLevelCm} cm`, hint: `Rise ${r.rateOfRiseCmHr} cm/hr` },
-      { label: 'Rainfall', value: `${r.rainfallMmHr} mm/hr`, hint: 'Accumulation rate' },
-      { label: 'Turbidity', value: `${r.turbidityNtu} NTU`, hint: `Δ ${r.turbidityDelta} from baseline` },
-      { label: 'Temperature', value: `${r.temperatureC}°C`, hint: 'Ambient' },
-      { label: 'Humidity', value: `${r.humidityPct}%`, hint: 'Ambient' },
-      { label: 'Pressure', value: `${r.pressureHpa} hPa`, hint: r.pressureTrend },
+      { label: 'Water level', value: `${n(r.waterLevelCm)} cm`, hint: `Rise ${n(r.rateOfRiseCmHr)} cm/hr` },
+      { label: 'Rainfall', value: `${n(r.rainfallMmHr)} mm/hr`, hint: 'Accumulation rate' },
+      { label: 'Turbidity', value: `${n(r.turbidityNtu)} NTU`, hint: `Δ ${n(r.turbidityDelta)} from baseline` },
+      { label: 'Temperature', value: `${n(r.temperatureC)}°C`, hint: 'Ambient' },
+      { label: 'Humidity', value: `${n(r.humidityPct)}%`, hint: 'Ambient' },
+      { label: 'Pressure', value: `${n(r.pressureHpa, 1013)} hPa`, hint: r.pressureTrend || 'Stable' },
     ]
   }
   if (node.type === 'forest') {
     return [
       { label: 'Flame detection', value: r.flameDetected ? 'Detected' : 'Clear', hint: r.flameSustained ? 'Sustained' : 'Instantaneous' },
-      { label: 'MQ-135 gas', value: `${r.gasPpm} ppm`, hint: `Δ ${r.gasDelta} vs baseline` },
-      { label: 'Soil moisture', value: `${r.soilMoisturePct}%`, hint: r.drynessTrend },
-      { label: 'Air temperature', value: `${r.temperatureC}°C`, hint: 'Canopy' },
+      { label: 'MQ-135 gas', value: `${n(r.gasPpm)} ppm`, hint: `Δ ${n(r.gasDelta)} vs baseline` },
+      { label: 'Soil moisture', value: `${n(r.soilMoisturePct)}%`, hint: r.drynessTrend || 'Moist' },
+      { label: 'Air temperature', value: `${n(r.temperatureC)}°C`, hint: 'Canopy' },
     ]
   }
   return [
-    { label: 'PM2.5', value: `${r.pm25} µg/m³`, hint: 'Fine particulate' },
-    { label: 'PM10', value: `${r.pm10} µg/m³`, hint: 'Coarse particulate' },
-    { label: 'AQI equivalent', value: String(aqiFromPm(r.pm25, r.pm10)), hint: 'Display score' },
-    { label: 'CO', value: `${r.coPpm} ppm`, hint: 'Optional gas' },
-    { label: 'NO₂', value: `${r.no2Ppb} ppb`, hint: 'Optional gas' },
+    { label: 'PM2.5', value: `${n(r.pm25)} µg/m³`, hint: 'Fine particulate' },
+    { label: 'PM10', value: `${n(r.pm10)} µg/m³`, hint: 'Coarse particulate' },
+    { label: 'AQI equivalent', value: String(aqiFromPm(n(r.pm25), n(r.pm10))), hint: 'Display score' },
+    { label: 'CO', value: `${n(r.coPpm)} ppm`, hint: 'Optional gas' },
+    { label: 'NO₂', value: `${n(r.no2Ppb)} ppb`, hint: 'Optional gas' },
   ]
 }
 
 export function readingSummary(node) {
-  const r = node.readings
-  if (node.type === 'water') return `${r.waterLevelCm} cm · ${r.rainfallMmHr} mm/hr`
+  const r = node.readings || {}
+  if (node.type === 'water') return `${n(r.waterLevelCm)} cm · ${n(r.rainfallMmHr)} mm/hr`
   if (node.type === 'forest') {
-    return `${r.flameDetected ? 'Flame · ' : ''}${r.gasPpm} ppm · soil ${r.soilMoisturePct}%`
+    return `${r.flameDetected ? 'Flame · ' : ''}${n(r.gasPpm)} ppm · soil ${n(r.soilMoisturePct)}%`
   }
-  return `AQI ${aqiFromPm(r.pm25, r.pm10)} · PM2.5 ${r.pm25}`
+  return `AQI ${aqiFromPm(n(r.pm25), n(r.pm10))} · PM2.5 ${n(r.pm25)}`
 }
 
 export function seedHistory(node, points = 36) {
@@ -268,21 +285,21 @@ export function tickNode(node) {
 }
 
 export function networkMetrics(nodes, alerts) {
-  const online = nodes.filter((n) => n.status === 'online').length
-  const offline = nodes.filter((n) => n.status === 'offline').length
-  const degraded = nodes.filter((n) => n.status === 'degraded').length
+  const online = nodes.filter((item) => item.status === 'online').length
+  const offline = nodes.filter((item) => item.status === 'offline').length
+  const degraded = nodes.filter((item) => item.status === 'degraded').length
   const byRisk = {
-    NORMAL: nodes.filter((n) => n.risk === 'NORMAL').length,
-    WATCH: nodes.filter((n) => n.risk === 'WATCH').length,
-    WARNING: nodes.filter((n) => n.risk === 'WARNING').length,
-    CRITICAL: nodes.filter((n) => n.risk === 'CRITICAL').length,
+    NORMAL: nodes.filter((item) => item.risk === 'NORMAL').length,
+    WATCH: nodes.filter((item) => item.risk === 'WATCH').length,
+    WARNING: nodes.filter((item) => item.risk === 'WARNING').length,
+    CRITICAL: nodes.filter((item) => item.risk === 'CRITICAL').length,
   }
   const byType = {
-    water: nodes.filter((n) => n.type === 'water').length,
-    forest: nodes.filter((n) => n.type === 'forest').length,
-    atmosphere: nodes.filter((n) => n.type === 'atmosphere').length,
+    water: nodes.filter((item) => item.type === 'water').length,
+    forest: nodes.filter((item) => item.type === 'forest').length,
+    atmosphere: nodes.filter((item) => item.type === 'atmosphere').length,
   }
-  const active = alerts.filter((a) => a.status !== 'resolved')
+  const active = alerts.filter((item) => item.status !== 'resolved')
   return {
     totalNodes: nodes.length,
     online,
@@ -293,13 +310,13 @@ export function networkMetrics(nodes, alerts) {
     byRisk,
     byType,
     activeAlerts: active.length,
-    criticalAlerts: active.filter((a) => a.severity === 'CRITICAL').length,
-    avgRisk: Math.round(nodes.reduce((s, n) => s + n.riskScore, 0) / (nodes.length || 1)),
+    criticalAlerts: active.filter((item) => item.severity === 'CRITICAL').length,
+    avgRisk: Math.round(nodes.reduce((sum, item) => sum + n(item.riskScore), 0) / (nodes.length || 1)),
   }
 }
 
 export function buildAlertFromNode(node) {
-  const type = NODE_TYPES[node.type]
+  const type = nodeTypeMeta(node.type)
   return {
     id: `ALT-${node.id}-${Date.now()}`,
     nodeId: node.id,
@@ -327,7 +344,7 @@ export function maybeOpenAlerts(prevNodes, nextNodes, alerts) {
   nextNodes.forEach((node, i) => {
     const prev = prevNodes[i]
     if (!prev) return
-    const type = NODE_TYPES[node.type]
+    const type = nodeTypeMeta(node.type)
     const key = `${node.id}:${type.hazard}`
     const crossed = RISK_RANK[node.risk] >= RISK_RANK.WARNING && RISK_RANK[prev.risk] < RISK_RANK[node.risk]
     const stillHot = RISK_RANK[node.risk] >= RISK_RANK.WARNING && !open.has(key)

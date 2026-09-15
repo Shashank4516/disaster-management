@@ -26,7 +26,7 @@ const hazardInitial = {
   pollution: 'AQ',
 }
 
-export function AppHeader({ onMenu, alerts = [], unackedCount = 0 }) {
+export function AppHeader({ onMenu, alerts = [], unackedCount = 0, user, connection = 'connecting' }) {
   const recent = [...alerts].sort((a, b) => b.ts - a.ts).slice(0, 5)
 
   return (
@@ -77,8 +77,8 @@ export function AppHeader({ onMenu, alerts = [], unackedCount = 0 }) {
           <Dropdown.Toggle as="button" className="header-profile" type="button">
             <span className="operator-avatar">CR</span>
             <span className="header-profile-copy">
-              <strong>Control Room</strong>
-              <small>Operator</small>
+              <strong>{user?.username || 'Control Room'}</strong>
+              <small>{connection === 'live' ? 'API connected' : user?.role || 'Operator'}</small>
             </span>
             <i className="ri-arrow-down-s-line" />
           </Dropdown.Toggle>

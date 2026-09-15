@@ -1,0 +1,11 @@
+FROM timescale/timescaledb:latest-pg18
+
+# Defaults for standalone `docker run`; the deploy compose overrides the password at runtime.
+# USER/DB must stay `environet`/`environet_db`: the baked dump restores objects owned by that role.
+ENV POSTGRES_USER=environet \
+    POSTGRES_PASSWORD=environet \
+    POSTGRES_DB=environet_db
+
+# Replayed on first boot of a fresh volume: full schema (12 hypertables),
+# continuous aggregate, compression policies, and all data present at package time.
+COPY db/snapshot/environet_db.sql /docker-entrypoint-initdb.d/01-environet_db.sql

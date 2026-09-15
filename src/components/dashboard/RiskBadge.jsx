@@ -9,11 +9,11 @@ export function RiskBadge({ risk }) {
   )
 }
 
-export function LivePill() {
+export function LivePill({ live = true }) {
   return (
-    <span className="badge bg-success d-inline-flex align-items-center gap-1">
+    <span className={`badge ${live ? 'bg-success' : 'bg-secondary'} d-inline-flex align-items-center gap-1`}>
       <span className="live-dot" />
-      Live
+      {live ? 'Live' : 'Offline'}
     </span>
   )
 }

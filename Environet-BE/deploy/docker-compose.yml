@@ -1,0 +1,38 @@
+name: environet
+
+services:
+  api:
+    image: penguin5681/environet:api-0.7.0
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgres://environet:${POSTGRES_PASSWORD:-environet}@db:5432/environet_db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: penguin5681/environet:db-0.7.0
+    ports:
+      - "5432:5432"
+    environment:
+      # User and database name are fixed: the baked image restores data owned by `environet`.
+      POSTGRES_USER: environet
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-environet}
+      POSTGRES_DB: environet_db
+    volumes:
+      - db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U environet -d environet_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  db_data:
+
+

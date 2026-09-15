@@ -1,0 +1,38 @@
+{
+  "name": "environet-be",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Environet backend",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "stack:up": "bash scripts/clean-start.sh",
+    "stack:down": "docker compose down --remove-orphans",
+    "registry:up": "docker compose -f registry/docker-compose.yml up -d",
+    "registry:down": "docker compose -f registry/docker-compose.yml down",
+    "test:api": "bash scripts/test-api.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.4.1",
+    "@types/pg": "^8.23.1",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}

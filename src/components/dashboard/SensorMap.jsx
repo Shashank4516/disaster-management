@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
-import { NODE_TYPES, RISK_LEVELS, formatRelative, readingSummary } from '@/lib/sensors'
+import { RISK_LEVELS, formatRelative, nodeTypeMeta, readingSummary } from '@/lib/sensors'
 
 function FitBounds({ nodes }) {
   const map = useMap()
@@ -42,7 +42,9 @@ export function SensorMap({ nodes, height = 'h-[420px]' }) {
           attribution="&copy; OpenStreetMap contributors"
         />
         <FitBounds nodes={nodes} />
-        {nodes.map((node) => {
+        {nodes
+          .filter((node) => Number.isFinite(node.lat) && Number.isFinite(node.lng))
+          .map((node) => {
           const color = RISK_LEVELS[node.risk]?.color || '#64748b'
           return (
             <CircleMarker
@@ -61,7 +63,7 @@ export function SensorMap({ nodes, height = 'h-[420px]' }) {
                 <div className="p-1">
                   <strong>{node.name}</strong>
                   <div className="fs-11 text-secondary">
-                    {node.id} · {NODE_TYPES[node.type].label} · {node.risk}
+                    {node.id} · {nodeTypeMeta(node.type).label} · {node.risk}
                   </div>
                   <div className="fs-11 text-secondary">
                     {node.city}, {node.region}

@@ -4,16 +4,18 @@ import { Card, Col, Nav, Row, Table } from 'react-bootstrap'
 import ApexChart from '@/components/dashbyte/ApexChart'
 import { CardNav } from '@/components/dashbyte/PageHeader'
 import { LivePill, RiskBadge } from '@/components/dashboard/RiskBadge'
-import { NODE_TYPES, formatRelative, primaryMetric, readingFields } from '@/lib/sensors'
+import { useNodeHistory } from '@/hooks/useNodeHistory'
+import { formatRelative, nodeTypeMeta, primaryMetric, readingFields } from '@/lib/sensors'
 
 export function NodeDetailPage() {
   const { nodeId } = useParams()
-  const { nodes, alerts } = useOutletContext()
+  const { nodes, alerts, status } = useOutletContext()
   const [range, setRange] = useState('live')
-  const node = nodes.find((n) => n.id === nodeId)
+  const node = nodes.find((item) => item.id === nodeId)
+  const { points: historyPoints, loading: historyLoading } = useNodeHistory(node, range)
 
   const nodeAlerts = useMemo(
-    () => alerts.filter((a) => a.nodeId === nodeId).sort((a, b) => b.ts - a.ts),
+    () => alerts.filter((item) => item.nodeId === nodeId).sort((a, b) => b.ts - a.ts),
     [alerts, nodeId],
   )
 
@@ -21,18 +23,17 @@ export function NodeDetailPage() {
     return (
       <Card className="card-one">
         <Card.Body>
-          <p className="mb-2">Node not found.</p>
+          <p className="mb-2">{status === 'connecting' ? 'Loading node…' : 'Node not found.'}</p>
           <Link to="/sensors">Back to sensor network</Link>
         </Card.Body>
       </Card>
     )
   }
 
-  const type = NODE_TYPES[node.type]
+  const type = nodeTypeMeta(node.type)
   const metric = primaryMetric(node)
-  const take = range === 'live' ? 16 : range === 'day' ? 32 : 48
-  const history = (node.history || []).slice(-take)
-  const series = [{ name: metric.label, data: history.map((p) => p[metric.key] ?? 0) }]
+  const history = historyPoints.length ? historyPoints : node.history || []
+  const series = [{ name: metric.label, data: history.map((point) => point[metric.key] ?? 0) }]
   const options = {
     chart: { parentHeightOffset: 0, toolbar: { show: false }, zoom: { enabled: false } },
     colors: [type.color],
@@ -44,7 +45,7 @@ export function NodeDetailPage() {
     },
     grid: { borderColor: 'rgba(72,94,144, 0.07)' },
     xaxis: {
-      categories: history.map((p) => new Date(p.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+      categories: history.map((point) => new Date(point.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
       labels: { style: { fontSize: '11px' } },
     },
     yaxis: { labels: { style: { fontSize: '11px', colors: ['#a2abb5'] } } },
@@ -67,7 +68,7 @@ export function NodeDetailPage() {
           <h4 className="main-title mb-0">{node.name}</h4>
         </div>
         <div className="d-flex align-items-center gap-2">
-          <LivePill />
+          <LivePill live={status === 'live'} />
           <RiskBadge risk={node.risk} />
         </div>
       </div>
@@ -154,7 +155,7 @@ export function NodeDetailPage() {
             <Card.Body>
               <p className="fs-sm mb-2">Current computed risk from live sensor output.</p>
               <p className="fw-semibold mb-1">{node.trigger}</p>
-              <p className="fs-11 text-secondary mb-0">Edge engine · updates without page reload</p>
+              <p className="fs-11 text-secondary mb-0">Server risk engine · live ingest every 5s</p>
             </Card.Body>
           </Card>
         </Col>
@@ -206,6 +207,7 @@ export function NodeDetailPage() {
             </Card.Header>
             <Card.Body>
               <ApexChart series={series} options={options} type="area" height={280} />
+              {historyLoading ? <p className="fs-11 text-secondary mt-2 mb-0">Loading history…</p> : null}
             </Card.Body>
           </Card>
         </Col>

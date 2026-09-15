@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "backend": "npm --prefix Environet-BE run stack:up",
+    "backend:down": "npm --prefix Environet-BE run stack:down",
+    "backend:logs": "docker compose -f Environet-BE/docker-compose.yml logs -f api",
+    "dev:full": "npm run backend && vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
