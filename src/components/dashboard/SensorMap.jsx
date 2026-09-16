@@ -8,10 +8,14 @@ function FitBounds({ nodes }) {
   const signature = useMemo(() => nodes.map((n) => n.id).join(','), [nodes])
 
   useEffect(() => {
-    if (!nodes.length) return
-    const bounds = nodes.map((n) => [n.lat, n.lng])
+    const points = nodes.filter((n) => Number.isFinite(n.lat) && Number.isFinite(n.lng))
     map.invalidateSize()
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 6 })
+    if (!points.length) {
+      map.setView([22.5, 80], 5)
+      return
+    }
+    const bounds = points.map((n) => [n.lat, n.lng])
+    map.fitBounds(bounds, { padding: [28, 28], maxZoom: 7 })
   }, [map, nodes, signature])
 
   useEffect(() => {
@@ -27,9 +31,9 @@ function FitBounds({ nodes }) {
   return null
 }
 
-export function SensorMap({ nodes, height = 'h-[420px]' }) {
+export function SensorMap({ nodes }) {
   return (
-    <div className={`sensor-map-frame overflow-hidden ${height}`}>
+    <div className="sensor-map-frame overflow-hidden">
       <MapContainer
         center={[22.5, 80]}
         zoom={5}

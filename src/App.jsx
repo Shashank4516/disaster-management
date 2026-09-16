@@ -4,6 +4,7 @@ import { AlertsPage } from '@/pages/AlertsPage'
 import { HazardsPage } from '@/pages/HazardsPage'
 import { NodeDetailPage } from '@/pages/NodeDetailPage'
 import { OverviewPage } from '@/pages/OverviewPage'
+import { RawSensorsPage } from '@/pages/RawSensorsPage'
 import { SensorsPage } from '@/pages/SensorsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
@@ -14,6 +15,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<OverviewPage />} />
           <Route path="sensors" element={<SensorsPage />} />
+          <Route path="raw-sensors" element={<RawSensorsPage />} />
           <Route path="node/:nodeId" element={<NodeDetailPage />} />
           <Route path="alerts" element={<AlertsPage />} />
           <Route path="hazards" element={<HazardsPage />} />

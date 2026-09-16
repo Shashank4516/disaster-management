@@ -6,7 +6,7 @@ import { NODE_TYPES, formatRelative, readingSummary } from '@/lib/sensors'
 
 const sections = [
   { key: 'water', ...NODE_TYPES.water, blurb: 'Water level, rainfall, turbidity, and pressure for flood belts.' },
-  { key: 'forest', ...NODE_TYPES.forest, blurb: 'Flame, MQ-135 gas, and soil moisture across forest corridors.' },
+  { key: 'forest', ...NODE_TYPES.forest, blurb: 'MQ-135 gas, temperature, humidity, and pressure across forest corridors.' },
   { key: 'atmosphere', ...NODE_TYPES.atmosphere, blurb: 'PM2.5 / PM10 converted to AQI for urban corridors.' },
 ]
 

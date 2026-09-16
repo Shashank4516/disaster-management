@@ -211,6 +211,12 @@ BODY=$(curl -sf "$BASE_URL/api/nodes/W01/history?sensor=ultrasonic_water_level&r
 BODY=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/nodes/W01/history?sensor=bogus&range=1h")
 check_status "history rejects unknown sensor (400)" "400" "$BODY"
 
+BODY=$(curl -sf "$BASE_URL/api/sensors") \
+  && check "/api/sensors returns mounted instances" '.count >= 1 and (.sensors | length) >= 1' "$BODY" \
+  && check "/api/sensors includes type, unit, and latest values" \
+      '[.sensors[] | select(.sensor_type != null and .unit != null)] | length >= 1' "$BODY" \
+  || check "/api/sensors reachable" '.count >= 1' "{}"
+
 # ------------------------------------------------------------
 section "7. Alerts — list, filters, detail"
 

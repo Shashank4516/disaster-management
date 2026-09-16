@@ -187,12 +187,13 @@ Backend secrets (`JWT_SECRET`, `AUTH_ADMIN_*`, `POSTGRES_*`) belong in `Environe
 | --- | --- |
 | `/` | Network overview — KPIs, regional map, live alerts |
 | `/sensors` | Regional risk map + node table |
+| `/raw-sensors` | Raw sensor catalog — type, job, latest values, history |
 | `/node/:nodeId` | Node identity, health, live readings, history |
 | `/alerts` | Filter, acknowledge, escalate, resolve |
 | `/hazards` | Flood / fire / air-quality modules |
 | `/settings` | Connection, operator login, stack status |
 
-Public reads (`GET /api/nodes`, `GET /api/alerts`, history) need no token. Alert mutations require a JWT from `POST /api/auth/login`.
+Public reads (`GET /api/nodes`, `GET /api/sensors`, `GET /api/alerts`, history) need no token. Alert mutations require a JWT from `POST /api/auth/login`.
 
 ---
 
@@ -229,7 +230,7 @@ npm run preview    # local check of the production bundle
 ```
 .
 ├── src/                    # Dashboard
-│   ├── pages/              # Overview, map, node detail, alerts, hazards, settings
+│   ├── pages/              # Overview, map, raw sensors, node detail, alerts, hazards, settings
 │   ├── hooks/              # Live network + node history (API + WebSocket)
 │   ├── lib/api.js          # HTTP client for Environet-BE
 │   └── lib/adaptNetwork.js # API JSON → UI models

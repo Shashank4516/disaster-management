@@ -83,31 +83,40 @@ const RANGES: Record<string, string> = {
 
 const LATEST_READINGS_QUERY = `
   SELECT * FROM (
-    SELECT 'flame' AS sensor_type, time, to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source' AS values
+    SELECT 'flame' AS sensor_type, time, quality_flag, source, sensor_instance_id,
+           to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source' AS values
     FROM flame_readings t WHERE node_id = $1 ORDER BY time DESC LIMIT 1
   ) q UNION ALL SELECT * FROM (
-    SELECT 'mq135_gas', time, to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
+    SELECT 'mq135_gas', time, quality_flag, source, sensor_instance_id,
+           to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
     FROM gas_readings t WHERE node_id = $1 ORDER BY time DESC LIMIT 1
   ) q UNION ALL SELECT * FROM (
-    SELECT 'soil_moisture', time, to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
+    SELECT 'soil_moisture', time, quality_flag, source, sensor_instance_id,
+           to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
     FROM soil_moisture_readings t WHERE node_id = $1 ORDER BY time DESC LIMIT 1
   ) q UNION ALL SELECT * FROM (
-    SELECT 'ultrasonic_water_level', time, to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
+    SELECT 'ultrasonic_water_level', time, quality_flag, source, sensor_instance_id,
+           to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
     FROM water_level_readings t WHERE node_id = $1 ORDER BY time DESC LIMIT 1
   ) q UNION ALL SELECT * FROM (
-    SELECT 'rain_gauge', time, to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
+    SELECT 'rain_gauge', time, quality_flag, source, sensor_instance_id,
+           to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
     FROM rainfall_readings t WHERE node_id = $1 ORDER BY time DESC LIMIT 1
   ) q UNION ALL SELECT * FROM (
-    SELECT 'turbidity', time, to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
+    SELECT 'turbidity', time, quality_flag, source, sensor_instance_id,
+           to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
     FROM turbidity_readings t WHERE node_id = $1 ORDER BY time DESC LIMIT 1
   ) q UNION ALL SELECT * FROM (
-    SELECT 'bmp280_pressure', time, to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
+    SELECT 'bmp280_pressure', time, quality_flag, source, sensor_instance_id,
+           to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
     FROM pressure_readings t WHERE node_id = $1 ORDER BY time DESC LIMIT 1
   ) q UNION ALL SELECT * FROM (
-    SELECT 'dht22_temp', time, to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
+    SELECT 'dht22_temp', time, quality_flag, source, sensor_instance_id,
+           to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
     FROM temperature_readings t WHERE node_id = $1 ORDER BY time DESC LIMIT 1
   ) q UNION ALL SELECT * FROM (
-    SELECT 'dht22_humidity', time, to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
+    SELECT 'dht22_humidity', time, quality_flag, source, sensor_instance_id,
+           to_jsonb(t) - 'time' - 'node_id' - 'sensor_instance_id' - 'quality_flag' - 'source'
     FROM humidity_readings t WHERE node_id = $1 ORDER BY time DESC LIMIT 1
   ) q`;
 
@@ -154,6 +163,9 @@ export function registerNodeRoutes(app: import("express").Express, deps: NodeRou
         latest_readings: readings.rows.map((r) => ({
           sensor_type: r.sensor_type,
           time: r.time,
+          quality_flag: r.quality_flag,
+          source: r.source,
+          sensor_instance_id: r.sensor_instance_id,
           values: r.values,
         })),
       });

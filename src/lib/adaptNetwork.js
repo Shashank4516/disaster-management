@@ -153,7 +153,7 @@ export function adaptNode(payload, previous) {
   const raw = isDetail ? payload.node : payload
   const health = isDetail ? payload.health : null
   const risks = isDetail ? payload.risks : payload.risks
-  const latest = isDetail ? payload.latest_readings : null
+  const latest = isDetail ? payload.latest_readings : previous?.latestReadings || null
   const type = raw.node_type || raw.type || previous?.type || 'water'
   const lat = Number(raw.latitude ?? raw.lat ?? previous?.lat)
   const lng = Number(raw.longitude ?? raw.lng ?? previous?.lng)
@@ -191,6 +191,7 @@ export function adaptNode(payload, previous) {
     signalDbm,
     lastSeen,
     readings,
+    latestReadings: latest || previous?.latestReadings || [],
     risk,
     riskScore: classified.riskScore,
     confidence: Math.max(0.45, Math.min(0.99, Number(primary.confidence) || classified.confidence)),
@@ -201,10 +202,21 @@ export function adaptNode(payload, previous) {
 }
 
 export function patchNodeReading(node, payload) {
+  if (payload.node_id !== node.id) return node
   const apply = SENSOR_PATCH[payload.sensor]
-  if (!apply || payload.node_id !== node.id) return node
-  const readings = { ...node.readings, ...apply(payload.values || {}) }
-  const next = { ...node, readings, lastSeen: payload.time ? new Date(payload.time).getTime() : Date.now() }
+  const readings = apply ? { ...node.readings, ...apply(payload.values || {}) } : node.readings
+  const incoming = {
+    sensor_type: payload.sensor,
+    time: payload.time,
+    quality_flag: payload.quality_flag,
+    source: payload.source,
+    values: payload.values || {},
+  }
+  const existing = node.latestReadings || []
+  const latestReadings = existing.some((row) => row.sensor_type === payload.sensor)
+    ? existing.map((row) => (row.sensor_type === payload.sensor ? { ...row, ...incoming } : row))
+    : [...existing, incoming]
+  const next = { ...node, readings, latestReadings, lastSeen: payload.time ? new Date(payload.time).getTime() : Date.now() }
   const classified = classifyNode(next)
   const sample = { t: Date.now(), ...snapshotValues({ ...next, ...classified }) }
   return {

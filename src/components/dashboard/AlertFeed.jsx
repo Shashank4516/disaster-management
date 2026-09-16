@@ -13,7 +13,7 @@ export function AlertFeed({ alerts, onAcknowledge, onEscalate, onResolve, compac
         <Card.Title as="h6">{compact ? 'Critical / recent alerts' : 'Alert stream'}</Card.Title>
         <CardNav />
       </Card.Header>
-      <Card.Body>
+      <Card.Body className={compact ? 'alert-feed-body' : undefined}>
         {list.length === 0 ? <p className="fs-sm text-secondary mb-0">No alerts in this view.</p> : null}
         {list.map((alert) => (
           <div key={alert.id} className="d-flex align-items-start mb-3 pb-3 border-bottom">

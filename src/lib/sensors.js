@@ -112,9 +112,7 @@ export function classifyNode(node) {
     risk = worse(gas, dry)
     if (r.flameDetected || r.flameSustained) risk = 'CRITICAL'
     score = Math.min(98, gasPpm / 2.8 + (r.flameDetected ? 40 : 0) + Math.max(0, 30 - soil))
-    trigger = r.flameDetected
-      ? 'Flame detected'
-      : `MQ-135 ${gasPpm} ppm · soil ${soil}%`
+    trigger = `MQ-135 ${gasPpm} ppm`
   } else {
     const aqi = aqiFromPm(n(r.pm25), n(r.pm10))
     risk = band(aqi, 100, 200, 300)
@@ -182,10 +180,10 @@ export function readingFields(node) {
   }
   if (node.type === 'forest') {
     return [
-      { label: 'Flame detection', value: r.flameDetected ? 'Detected' : 'Clear', hint: r.flameSustained ? 'Sustained' : 'Instantaneous' },
       { label: 'MQ-135 gas', value: `${n(r.gasPpm)} ppm`, hint: `Δ ${n(r.gasDelta)} vs baseline` },
-      { label: 'Soil moisture', value: `${n(r.soilMoisturePct)}%`, hint: r.drynessTrend || 'Moist' },
       { label: 'Air temperature', value: `${n(r.temperatureC)}°C`, hint: 'Canopy' },
+      { label: 'Humidity', value: `${n(r.humidityPct)}%`, hint: 'Canopy' },
+      { label: 'Pressure', value: `${n(r.pressureHpa, 1013)} hPa`, hint: r.pressureTrend || 'Stable' },
     ]
   }
   return [
@@ -201,7 +199,7 @@ export function readingSummary(node) {
   const r = node.readings || {}
   if (node.type === 'water') return `${n(r.waterLevelCm)} cm · ${n(r.rainfallMmHr)} mm/hr`
   if (node.type === 'forest') {
-    return `${r.flameDetected ? 'Flame · ' : ''}${n(r.gasPpm)} ppm · soil ${n(r.soilMoisturePct)}%`
+    return `${n(r.gasPpm)} ppm · ${n(r.temperatureC)}°C`
   }
   return `AQI ${aqiFromPm(n(r.pm25), n(r.pm10))} · PM2.5 ${n(r.pm25)}`
 }

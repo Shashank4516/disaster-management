@@ -103,6 +103,7 @@ export const api = {
   ingestStatus: () => request('/ingest/status'),
   login: (username, password) => request('/api/auth/login', { method: 'POST', body: { username, password } }),
   me: () => request('/api/auth/me', { auth: true }),
+  sensors: () => request('/api/sensors'),
   nodes: () => request('/api/nodes'),
   node: (id) => request(`/api/nodes/${encodeURIComponent(id)}`),
   nodeHistory: (id, sensor, range) =>

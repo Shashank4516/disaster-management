@@ -179,6 +179,7 @@ It inserts through the same path real sensors will use — `INSERT ... ON CONFLI
 | --- | --- | --- | --- |
 | `/api/nodes` | GET | — | All nodes with latest fused risk level per hazard (0=NORMAL 1=WATCH 2=WARNING 3=CRITICAL) |
 | `/api/nodes/:id` | GET | — | Node detail: metadata, config, risks, health, latest reading per sensor |
+| `/api/sensors` | GET | — | Mounted sensor catalog + latest raw sample (quality, source, analog values) |
 | `/api/nodes/:id/history?sensor=&range=` | GET | — | Time series — `sensor`: registry name (e.g. `ultrasonic_water_level`), `range`: `1h`/`6h`/`24h` (raw buckets) or `7d`/`30d` (hourly continuous aggregates) |
 | `/api/nodes/:id/config` | GET/PUT | 🔒 | Threshold configuration (the authority feedback loop) |
 | `/api/nodes` | POST | 🔒 | Register a node — generates its ingestion API key |
@@ -239,6 +240,7 @@ ON CONFLICT (node_id) DO UPDATE SET config = EXCLUDED.config;
 │   ├── forecast.ts     # linear-trend heuristic over hourly aggregates
 │   ├── realtime.ts     # WebSocket push: reading / alert / node_status events
 │   ├── nodes.ts        # node detail, history, config, registration
+│   ├── sensors.ts      # GET /api/sensors catalog + latest raw samples
 │   ├── alerts.ts       # alert list/detail + acknowledge/resolve/escalate
 │   ├── auth.ts         # JWT login/me, admin seeding, requireAuth/requireAdmin
 │   ├── analytics.ts    # forecast endpoint

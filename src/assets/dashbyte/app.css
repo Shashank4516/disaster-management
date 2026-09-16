@@ -480,24 +480,33 @@
 
 .map-card-body {
   display: flex;
-  flex: 1;
-  min-height: 420px;
+  height: 300px;
+  min-height: 300px;
+  max-height: 300px;
+  padding: 0;
 }
 
 .sensor-map-embed {
   width: 100%;
-  flex: 1;
-  min-height: 420px;
-  height: 100%;
+  height: 300px;
   overflow: hidden;
+}
+
+.sensor-map-embed.is-page {
+  height: 360px;
 }
 
 .sensor-map-embed .sensor-map-frame,
 .sensor-map-embed .leaflet-container {
   width: 100%;
   height: 100%;
-  min-height: 420px;
+  min-height: 0;
   background: #f8f9fc;
+}
+
+.alert-feed-body {
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .live-dot {

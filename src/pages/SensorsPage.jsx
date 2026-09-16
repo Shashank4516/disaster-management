@@ -81,8 +81,8 @@ export function SensorsPage() {
         <Col xs="12">
           <Card className="card-one">
             <Card.Body className="p-0">
-              <div className="sensor-map-embed" style={{ height: 420 }}>
-                <SensorMap nodes={filtered} height="h-100" />
+              <div className="sensor-map-embed is-page">
+                <SensorMap nodes={filtered} />
               </div>
             </Card.Body>
           </Card>

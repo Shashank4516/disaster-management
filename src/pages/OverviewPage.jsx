@@ -130,13 +130,13 @@ export function OverviewPage() {
         })}
 
         <Col lg="8">
-          <Card className="card-one map-card h-100">
+          <Card className="card-one map-card">
             <Card.Header>
               <Card.Title as="h6">Regional risk map</Card.Title>
             </Card.Header>
             <Card.Body className="p-0 map-card-body">
               <div className="sensor-map-embed">
-                <SensorMap nodes={nodes} height="h-100" />
+                <SensorMap nodes={nodes} />
               </div>
             </Card.Body>
           </Card>

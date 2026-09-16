@@ -7,6 +7,7 @@ import { registerNodeRoutes } from "./nodes.js";
 import { registerAlertRoutes } from "./alerts.js";
 import { registerAnalyticsRoutes } from "./analytics.js";
 import { registerIngestRoutes } from "./ingest.js";
+import { registerSensorRoutes } from "./sensors.js";
 import { attachRealtime } from "./realtime.js";
 
 try {
@@ -82,6 +83,7 @@ registerAlertRoutes(app, { pool });
 registerAuthRoutes(app, { pool });
 registerAnalyticsRoutes(app, { pool });
 registerIngestRoutes(app, { pool });
+registerSensorRoutes(app, { pool });
 
 // Ingestion status: row counts per reading table, newest timestamp per table.
 app.get("/ingest/status", async (_req: Request, res: Response) => {

@@ -190,6 +190,49 @@ curl http://localhost:3000/api/nodes/W01
 
 **Errors:** `404` unknown node id, `503` database error.
 
+### `GET /api/sensors`
+
+Mounted sensor instances from `sensor_types` + `node_sensors`, each with the
+newest raw sample from its readings hypertable. Public — no auth.
+
+```bash
+curl http://localhost:3000/api/sensors
+```
+
+```json
+{
+  "count": 12,
+  "sensors": [
+    {
+      "instance_id": 1,
+      "node_id": "F01",
+      "node_name": "Forest Node 1",
+      "node_type": "forest",
+      "node_status": "active",
+      "sensor_type": "flame",
+      "unit": "boolean",
+      "description": "IR flame detection sensor",
+      "active": true,
+      "calibration_offset": 0,
+      "calibrated_at": null,
+      "install_date": "2026-08-12T12:47:29.114Z",
+      "last_seen": "2026-09-16T05:50:12.331Z",
+      "quality_flag": 1,
+      "source": "simulated",
+      "values": { "detected": false, "raw_value": 41.2 }
+    }
+  ]
+}
+```
+
+- One row per **active** physical instance (`node_sensors.active = true`).
+- `values` follows `schema.sql` for that sensor table (converted reading plus
+  analog fields such as `raw_voltage` / `raw_distance_cm` when present).
+- `quality_flag`: `1` valid, `0` suspect, `-1` fault. `source` is `simulated`
+  or `real`.
+
+**Errors:** `503` database error.
+
 ### `GET /api/nodes/:id/history?sensor=&range=`
 
 Time series for one sensor on one node.

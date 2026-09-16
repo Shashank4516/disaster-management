@@ -5,6 +5,7 @@ import avatarImg from '@/assets/img/avatar.jpg'
 const dashboardMenu = [
   { label: 'Overview', link: '/', icon: 'ri-dashboard-line', end: true },
   { label: 'Regional Map', link: '/sensors', icon: 'ri-radar-line' },
+  { label: 'Raw Sensors', link: '/raw-sensors', icon: 'ri-cpu-line' },
   { label: 'Alert Management', link: '/alerts', icon: 'ri-alarm-warning-line' },
 ]
 
